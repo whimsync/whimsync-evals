@@ -1,0 +1,122 @@
+[
+  {
+    "id": "fact_single_location",
+    "tags": ["fact"],
+    "rawText": "I live in Pune, India.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User lives in Pune, India.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "lives_in",
+          "object": "Pune"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "fact_job",
+    "tags": ["fact"],
+    "rawText": "I work as a backend engineer at Zentrix Labs, mostly on their payments platform.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User works as a backend engineer at Zentrix Labs.",
+          "kind": "fact"
+        },
+        {
+          "content": "User works mostly on the payments platform at Zentrix Labs.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "works_at",
+          "object": "Zentrix Labs"
+        },
+        {
+          "subject": "User",
+          "predicate": "works_on",
+          "object": "payments platform"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "temporal_schedule",
+    "tags": ["fact", "temporal"],
+    "rawText": "Every Tuesday and Thursday I have badminton practice from 7 to 8:30 pm at the Koramangala club.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User has badminton practice every Tuesday and Thursday from 7 to 8:30 pm at the Koramangala club.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "plays",
+          "object": "badminton"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "numeric_precision",
+    "tags": ["fact", "numeric"],
+    "rawText": "My monthly rent is 42,500 rupees and my lease ends on 31 March 2027.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User's monthly rent is 42,500 rupees.",
+          "kind": "fact"
+        },
+        {
+          "content": "User's lease ends on 31 March 2027.",
+          "kind": "fact"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "third_party_hedged",
+    "tags": ["fact", "hedged"],
+    "rawText": "My manager Priya mentioned she might be moving to the Singapore office next quarter, but nothing is confirmed yet.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User's manager is Priya.",
+          "kind": "fact"
+        },
+        {
+          "content": "Priya might move to the Singapore office next quarter, but it is not confirmed.",
+          "kind": "other"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "has_manager",
+          "object": "Priya"
+        }
+      ],
+      "mutations": []
+    }
+  }
+]

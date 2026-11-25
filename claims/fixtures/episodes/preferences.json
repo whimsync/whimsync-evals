@@ -1,0 +1,59 @@
+[
+  {
+    "id": "preference_food",
+    "tags": ["preference"],
+    "rawText": "I'm vegetarian and I really dislike mushrooms, so please never suggest recipes with them.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User is vegetarian.",
+          "kind": "fact"
+        },
+        {
+          "content": "User dislikes mushrooms and does not want recipes containing them.",
+          "kind": "preference"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "dislikes",
+          "object": "mushrooms"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "preference_tooling",
+    "tags": ["preference"],
+    "rawText": "For side projects I prefer Bun over Node, and I always use Biome instead of ESLint.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User prefers Bun over Node for side projects.",
+          "kind": "preference"
+        },
+        {
+          "content": "User prefers Biome instead of ESLint.",
+          "kind": "preference"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "prefers",
+          "object": "Bun"
+        },
+        {
+          "subject": "User",
+          "predicate": "prefers",
+          "object": "Biome"
+        }
+      ],
+      "mutations": []
+    }
+  }
+]

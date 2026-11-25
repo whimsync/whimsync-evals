@@ -1,0 +1,34 @@
+[
+  {
+    "id": "chitchat_greeting",
+    "tags": ["noise"],
+    "rawText": "Hey, how's it going? Thanks for the help earlier!",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [],
+      "entities": [],
+      "mutations": []
+    }
+  },
+  {
+    "id": "chitchat_question",
+    "tags": ["noise"],
+    "rawText": "What's the difference between a list and a tuple in Python?",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [],
+      "entities": [],
+      "mutations": []
+    }
+  },
+  {
+    "id": "chitchat_weather",
+    "tags": ["noise"],
+    "rawText": "Ugh, it's raining again today. Anyway, never mind.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [],
+      "mutations": []
+    }
+  }
+]

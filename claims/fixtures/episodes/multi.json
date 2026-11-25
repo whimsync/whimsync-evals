@@ -1,0 +1,120 @@
+[
+  {
+    "id": "multi_fact_family",
+    "tags": ["fact", "multi"],
+    "rawText": "My sister Ananya just started medical school in Manipal, and my brother Rohan is a pilot with IndiGo. Our parents still live in Kochi.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User's sister Ananya started medical school in Manipal.",
+          "kind": "fact"
+        },
+        {
+          "content": "User's brother Rohan is a pilot with IndiGo.",
+          "kind": "fact"
+        },
+        {
+          "content": "User's parents live in Kochi.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "has_sister",
+          "object": "Ananya"
+        },
+        {
+          "subject": "User",
+          "predicate": "has_brother",
+          "object": "Rohan"
+        },
+        {
+          "subject": "Rohan",
+          "predicate": "works_for",
+          "object": "IndiGo"
+        },
+        {
+          "subject": "Ananya",
+          "predicate": "studies_in",
+          "object": "Manipal"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "multi_mixed_kinds",
+    "tags": ["fact", "preference", "goal", "multi"],
+    "rawText": "I own a 2019 Honda City. I'd rather take the train than drive long distances, and I'm planning to switch to an electric car by 2028.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User owns a 2019 Honda City.",
+          "kind": "fact"
+        },
+        {
+          "content": "User prefers taking the train over driving long distances.",
+          "kind": "preference"
+        },
+        {
+          "content": "User plans to switch to an electric car by 2028.",
+          "kind": "goal"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "owns",
+          "object": "Honda City"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "long_episode_meeting",
+    "tags": ["multi", "decision", "long"],
+    "rawText": "Notes from today's planning call. We agreed to ship the mobile app beta on 15 January. Kavya will own the iOS release and Tomas will handle Android. We decided to drop the offline sync feature from the beta because it is not stable yet. Budget for the beta marketing campaign is capped at 8,000 dollars. Next sync is on Monday.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "The team agreed to ship the mobile app beta on 15 January.",
+          "kind": "decision"
+        },
+        {
+          "content": "Kavya owns the iOS release.",
+          "kind": "fact"
+        },
+        {
+          "content": "Tomas handles the Android release.",
+          "kind": "fact"
+        },
+        {
+          "content": "The offline sync feature was dropped from the beta because it is not stable.",
+          "kind": "decision"
+        },
+        {
+          "content": "The beta marketing campaign budget is capped at 8,000 dollars.",
+          "kind": "decision"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "Kavya",
+          "predicate": "owns",
+          "object": "iOS release"
+        },
+        {
+          "subject": "Tomas",
+          "predicate": "handles",
+          "object": "Android release"
+        }
+      ],
+      "mutations": []
+    }
+  }
+]

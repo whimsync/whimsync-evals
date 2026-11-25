@@ -1,0 +1,27 @@
+{
+  "name": "whimsync-evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bun install && uv sync --project parser",
+    "parser": "uv run --project parser python -m bench.run",
+    "parser:compare": "uv run --project parser python -m bench.compare",
+    "parser:report": "uv run --project parser python -m bench.report",
+    "parser:generate": "uv run --project parser python -m bench.generate",
+    "parser:models": "uv run --project parser python -m bench.check_models",
+    "claims": "bun --env-file=.env claims/run.ts",
+    "claims:compare": "uv run --project parser python -m bench.compare",
+    "claims:report": "uv run --project parser python -m bench.report",
+    "test": "bun run test:claims && bun run test:parser",
+    "test:claims": "bun test claims/tests",
+    "test:parser": "uv run --directory parser pytest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check . && uv run --directory parser ruff check .",
+    "format": "biome check --write . && uv run --directory parser ruff format ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.3",
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  }
+}
