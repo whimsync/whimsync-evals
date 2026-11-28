@@ -1,161 +1,134 @@
 # whimsync-evals
 
-Benchmarks that measure how well [whimsync](https://github.com/whimsync/whimsync) extracts information, scored against **synthetic ground truth** (the expected output is known exactly because the inputs are generated from it).
+Evaluation harnesses for [whimsync](https://github.com/whimsync/whimsync), plus one CLI and web UI to manage, compare, group, rename and comment on every result.
 
 | Suite | Measures | Runner | Inputs |
 |---|---|---|---|
-| **Document parser** | PDF → Markdown quality of the `fast` / `smart` / `max` tiers on digital, scanned and photographed pages | `parser/` (Python, `uv`) | `parser/cases/*.md` |
-| **Claim extractor** | Claims, entities, mutations and evidence from the single Gemini extraction call | `claims/` (TypeScript, Bun) | `claims/fixtures/episodes/*.json` |
+| **Document parser** (`extractor/`) | PDF → Markdown quality, routing, links and cost of the `balanced` / `max` tiers, run in Docker | `extractor-eval` (Python, `uv`) | `extractor/dataset.json` + `extractor/cases/` |
+| **Claim extractor** (`claims/`) | Claims, entities, mutations and evidence from the single Gemini extraction call | `claims/run.ts` (TypeScript, Bun) | `claims/fixtures/episodes/*.json` |
 
-Every run writes a self-describing JSON results file. One set of tools compares runs and renders HTML reports for **both** suites.
-
-- [docs/architecture.md](docs/architecture.md): how the code is organised and how data flows
-- [docs/extending.md](docs/extending.md): adding cases, episodes, metrics, scan styles or a new suite
+- [docs/framework.md](docs/framework.md): what the parser evaluation measures, how runs and scoring work, how to read and manage results
+- [docs/extending.md](docs/extending.md): adding cases, labels, metrics and suites
 
 ---
 
 ## Setup
 
-whimsync must be checked out **next to** this repo. The suites import its code directly, so uncommitted changes there are benchmarked as-is.
-
-```
-projects/
-  whimsync/          # code under test
-  whimsync-evals/    # this repo
-```
-
 ```bash
-(cd ../whimsync && bun install)    # worker dependencies
-bun run setup                       # bun install + uv sync (includes OpenCV)
-cp .env.example .env                # then fill in GEMINI_API_KEY
-bun run parser:models               # check the key and models work
+bun run setup                  # bun install (claims) + uv sync (extractor-eval)
+cp .env.example .env           # fill in GEMINI_API_KEY
+bun run eval -- image build    # build whimsync-extractor-eval:<commit> from ../whimsync
 ```
+
+The parser runs **inside a Docker image** built from a whimsync checkout (`apps/extractor/Dockerfile.eval`). The evaluator never imports whimsync code. The image tag is the extractor commit, or `<commit>-dirty-<hash>` when `apps/extractor` has uncommitted changes, so every result names the exact code it measured. Use `--extractor-root` to build from another checkout.
 
 | Variable | Used by | Notes |
 |---|---|---|
-| `GEMINI_API_KEY` | both | Without it only the parser's `fast` tier runs. |
-| `GEMINI_MODEL` | parser (smart/max) | Default `gemini-3.5-flash`. `gemini-2.5-flash` returns 404 for new keys. |
-| `VLM_RPM` | parser | Max VLM requests per minute (0 = unlimited). |
-| `LLM_MODEL` | claims | Model under test, e.g. `gemini-3.5-flash-lite`. |
-| `EMBEDDING_MODEL` | claims | Used to match predicted claims to expected ones. |
-
-> **Free-tier keys** allow about 15 requests per minute **and a limited number per day** per model. Use `--rpm 12` (or `VLM_RPM=12`). When the daily quota runs out, calls fail within seconds instead of waiting for hours; finish the run later with `--resume`.
-
-All commands run from the repo root, and file arguments are relative to where you run them.
+| `GEMINI_API_KEY` | VLM tiers, judge, claims | Passed into the container by name, never on the command line. |
+| `GEMINI_MODEL` | extraction | VLM model the tiers use (override per run with `--model`). |
+| `VLM_RPM`, `VLM_CONCURRENCY`, `VLM_MAX_RETRIES` | extraction | Forwarded to the container. Use `VLM_RPM=12` on free-tier keys. |
+| `JUDGE_MODEL`, `JUDGE_RPM`, `JUDGE_TEMPERATURE` | judge | Defaults: `gemini-3.8-flash`, 12, 0. |
+| `LLM_MODEL`, `EMBEDDING_MODEL` | claims | Model under test, and the model that matches claims. |
 
 ---
 
-## Running
+## Document parser: `extractor-eval`
 
 ```bash
-# Document parser
-bun run parser -- --tiers fast --open                                    # offline, opens the report
-bun run parser -- --tiers fast,smart,max --variants 3 --rpm 12 --label baseline
-bun run parser -- --tiers smart,max --model gemini-3.5-flash-lite --rpm 12 --label lite
+bun run eval -- run --suite core,links --tiers balanced,max --label baseline --group baseline
+bun run eval -- run --case scanned-footer --tiers balanced,max
+bun run eval -- run --suite core --perf-repeats 3 --no-judge        # timing only (3 extra runs per small case)
+bun run eval -- run --resume <run-id>                               # continue an interrupted run
+bun run eval -- rescore <run>                                       # re-score saved outputs (no API calls)
+bun run eval -- compare <runA> <runB> [--tier max] [--scope verified]
+bun run ui                                                          # http://127.0.0.1:8765
+```
 
-# Claim extractor
+Each (case, tier) is parsed by `docker run --rm <image> --input /input/source.pdf --tier <tier> --output /output`. The container writes:
+- `document.md`: the stitched Markdown production would store;
+- `pages/NNN.md`: each page's final Markdown;
+- `trace.json`: per-page classifier facts, route and every VLM call;
+- `result.json`: configuration and summary.
+
+The evaluator then scores each **unit** (a gold page, or a quality range of pages):
+
+| Layer | What it checks |
+|---|---|
+| Deterministic | Text, character (CJK) and word similarity, reading order, heading level/sequence, table shape/rows/columns/cells, numbers (anywhere and in tables), required phrases (e.g. footers), Markdown validity, empty output |
+| Links | Exact `[anchor](url)` precision/recall and URL recall against `expected/links.json`. Never judged by an LLM. |
+| Gemini judge | Page image(s), gold and candidate go to a fixed rubric with a strict JSON schema, which scores text, reading order, tables and visuals (1–5) and lists critical errors. Each request and response is saved. |
+| Routing | `vlm_required` pages parsed natively (**false native**, critical) and `native_acceptable` pages sent to the VLM (**false VLM**, cost). Results are grouped by classifier reason and tag. |
+| Operational | Status, parse seconds, VLM page ratio, VLM failures, retries, tokens and cost (`pricing.json`), plus perf median/min/max |
+
+### Dataset
+
+`extractor/dataset.json` lists every case. The gold sits next to the PDF:
+
+```
+cases/<id>/source.pdf
+cases/<id>/expected/pages/NNN.md        # one file per page (small PDFs)
+cases/<id>/expected/ranges/<id>.md      # one file per quality range (large PDFs: only selected pages are scored)
+cases/<id>/expected/links.json          # optional link expectations
+```
+
+| Suite | Cases | Gold |
+|---|---|---|
+| `core` | `scanned-footer`, `chinese-grid-table`, `complex-form` (I-9), `apple-filing` (121 pages; ranges 32–36 and 49–50) | **Draft**, seeded from the Max tier. Review it, then mark it verified. |
+| `links` | duplicate anchors, internal GoTo link, multi-word/wrapped anchors, pre-formatted Markdown links | Exact, built by construction |
+| `synthetic` | 12 templates × (digital, scanned_noisy, photo) | Exact (the template) |
+
+```bash
+bun run eval -- dataset add ~/doc.pdf --id my-case [--range income:10-16]   # copy, hash, suggest labels, draft gold
+bun run eval -- dataset mark my-case --gold verified --labels verified      # after reviewing
+bun run eval -- dataset synth                                               # rebuild synthetic + links suites
+bun run eval -- dataset check
+```
+
+Quality is reported over **all** units and over **verified-gold** units separately, because draft gold copied from Max flatters Max.
+
+### Everything from the CLI or the web UI
+
+`bun run ui` serves the web UI at http://127.0.0.1:8765. Every action is available in both places. The UI runs long work (building the image, adding a PDF, runs, resume, rescore) as **jobs**: each job is the same `extractor-eval` command, started in the background. Jobs run one at a time in order, and their live log is on the Jobs page.
+
+| Task | Web UI | CLI |
+|---|---|---|
+| Build the extractor image | Setup → Build image | `image build [--extractor-root ../whimsync]` |
+| Add your own PDFs | Dataset → Add PDFs (drag and drop, several at once) | `dataset add file.pdf --id my-doc [--range id:S-E] [--suite mine]` |
+| Correct the expected Markdown | Dataset → case: source page, editor and live preview side by side (Ctrl+S) | `dataset gold my-doc p001 [--from fixed.md]` |
+| Label pages (route, classifier reasons, tags, required phrases) | Dataset → case → Page labels (saves on change) | `dataset label my-doc 3 --route vlm_required --reasons scanned --tags footer --phrase "..."` |
+| Mark gold or labels verified | Dataset → case → draft / verified | `dataset mark my-doc --gold verified --labels verified` |
+| Change suite or description, delete a case | Dataset → case | `dataset edit …`, `dataset remove my-doc` |
+| Rebuild synthetic suites, check the dataset | Dataset sidebar | `dataset synth`, `dataset check` |
+| Start a run | New run (pick cases or suites, tiers, image, judge, model, label, groups) | `run --case … --tiers … --label … --group …` |
+| Resume or rescore a run | Run page → Resume / Rescore | `run --resume <run>`, `rescore <run>` |
+| Follow or cancel work | Jobs | `jobs list`, `jobs log <id>`, `jobs cancel <id>` |
+| Compare runs or tiers side by side | Runs → tick runs → Compare | `compare <runA> <runB> [--tier max] [--scope verified]` |
+| Rename, group, comment, delete | Runs list and run pages | `runs rename`, `runs group --add/--remove`, `runs group-rename`, `runs comment --case --unit --tier`, `runs delete` |
+
+**Typical loop with your own documents:**
+1. Add the PDFs.
+2. Fix each case's expected Markdown and labels, then mark them verified.
+3. Run the cases. Pick "Verified gold only" when comparing runs.
+
+After changing whimsync's extractor code, rebuild the image and run again. Then compare the new run with the earlier one.
+
+Results live in `extractor/results/runs/<run-id>/`. Claims runs (`claims/results/*.json`) appear in the same list as `claims:<file>`. Names, groups and comments are stored as JSON next to each run (`meta.json`, `comments.json`). Job records and logs are in `extractor/results/jobs/`.
+
+The UI only accepts requests addressed to `localhost` or `127.0.0.1`, because it can start Docker jobs.
+
+## Claim extractor (`claims/`)
+
+```bash
 bun run claims -- --runs 3 --rpm 12 --label baseline
 LLM_MODEL=gemini-3.5-flash bun run claims -- --runs 3 --rpm 12 --label flash
-
-# Continue an interrupted or quota-stopped run (either suite)
-bun run parser -- --tiers fast,smart,max --resume parser/results/<ts>-baseline.partial.jsonl
+bun run eval -- compare claims:<A> claims:<B>     # or select both in the UI
 ```
 
-Each finished job is appended to `<results>.partial.jsonl` straight away, so a killed run loses nothing. `--resume` skips finished jobs and re-runs failed ones.
-
-### Comparing and viewing runs
-
-```bash
-bun run parser:compare -- parser/results/A.json parser/results/B.json --per-case
-bun run parser:compare -- X.json X.json --group-a fast/scanned --group-b smart/scanned   # tier vs tier
-bun run claims:compare -- claims/results/A.json claims/results/B.json --per-case
-bun run parser:report  -- parser/results/A.json parser/results/B.json --open
-bun run claims:report  -- claims/results/A.json claims/results/B.json --open
-```
-
-`compare` prints B − A per metric and flags `REGRESSION` / `improved` beyond `--threshold` (default 0.02; timing uses ±25%). It exits with `1` on any regression, so it can gate CI. The report is one self-contained HTML file:
-- **Parser:** a summary per tier/mode, deltas, accuracy plotted against rotation and JPEG quality, and a card per document (thumbnail, scores, side-by-side output, word diff).
-- **Claims:** metrics as mean ± std per run, and every episode's expected vs predicted claims.
-
----
-
-## Document parser suite
-
-Each case in `parser/cases/` is rendered to a real PDF. Links, tables and multi-column layout are preserved. Randomised scans of that PDF are then made with OpenCV, one set per render mode:
-
-| Mode | Simulates | Effects (random per variant) |
-|---|---|---|
-| `digital` | Native text PDF | none (1 variant) |
-| `scanned` | Clean flatbed scan | rotation ±2°, light noise and blur, JPEG 80–95 |
-| `scanned_noisy` | Old office copier | rotation ±6°, blur, speckle, JPEG 35–70, uneven light, dark border, folds |
-| `photo` | Phone photo | rotation ±10°, perspective warp, lighting gradient, colour cast |
-
-The corpus is cached in `parser/results/corpus/` and is deterministic for a given `--seed`.
-
-| Metric | Meaning |
-|---|---|
-| `text_similarity` | Character similarity of normalised text |
-| `word_recall` / `word_precision` | Ground-truth words kept / output words that are real (hallucination) |
-| `reading_order` | Longest common word subsequence ÷ reference length |
-| `heading_f1` / `heading_text_f1` | Headings matched on relative level + text / on text only |
-| `table_cell_accuracy`, `table_detection`, `table_shape_match` | GFM table cells, tables found, row/column shape |
-| `link_recall` / `link_exact` | Link URLs present / exact `[anchor](url)` pairs |
-| `seconds_per_page`, `vlm_pages`, `vlm_failures` | Cost, and VLM calls that returned nothing (above 0 means scores are understated) |
-
-Metrics that don't apply to a document (e.g. tables in a letter) are `null` and are left out of averages.
-
-| Flag | Default | |
-|---|---|---|
-| `--tiers` / `--modes` / `--cases` | all | Comma lists |
-| `--variants` / `--seed` | `2` / `0` | Random scan variants per mode |
-| `--concurrency` | `1` | Documents in flight. Higher is faster for VLM-bound runs but inflates `seconds_per_page`. |
-| `--rpm` / `--model` | env | VLM pacing / model override |
-| `--label` / `--out` / `--resume` | | Naming, output path, continue a run |
-| `--no-output` / `--keep-workdir` | off | Skip storing Markdown / keep page scans |
-| `--report` / `--open` | off | Build (and open) the HTML report afterwards |
-
-## Claim extractor suite
-
-The suite calls whimsync's `executeStructuredExtraction` directly, so no Postgres or Redis is needed. Fixtures cover facts, preferences, decisions, goals, multi-fact episodes, small talk that should yield **no** claims, and prior claims to update, delete or leave alone. Fixtures are validated on load.
-
-| Metric | Meaning |
-|---|---|
-| `claim_precision` / `claim_recall` / `claim_f1` | Claims matched one-to-one by embedding similarity (≥ `--sim-threshold`), micro-averaged |
-| `kind_accuracy` | Matched claims with the right kind |
-| `entity_*` | Subject–predicate–object triples |
-| `mutation_accuracy` | Correct update / delete / noop per candidate (also printed as a confusion matrix) |
-| `evidence_validity`, `claims_with_valid_evidence` | Evidence excerpts found verbatim in the episode |
-| `referential_integrity` | Internal IDs that resolve |
-| `noise_clean_rate`, `noise_claims_per_episode` | Hallucination on small talk |
-| `failure_rate`, `latency_p50_ms`, `latency_p95_ms` | Operational health |
-| `tag:<tag>:claim_f1` | Claim F1 per fixture tag |
-
-With `--runs N` every metric is reported as mean ± std.
-
-Flags: `--runs` (1), `--cases` / `--tags`, `--sim-threshold` (0.80), `--concurrency` (2), `--rpm` (0), `--retries` (3), `--label`, `--out`, `--fixtures` (`claims/fixtures/episodes`), `--resume`, `--no-output`.
-
----
+The suite calls whimsync's `executeStructuredExtraction` directly (it needs the sibling `../whimsync` checkout). Metrics: claim P/R/F1 (embedding-matched), kind accuracy, entity triples, mutation accuracy, evidence validity, referential integrity, noise clean rate and latency, each as mean ± std over `--runs`.
 
 ## Tests
 
 ```bash
-bun run test        # both suites (no API calls)
-bun run typecheck && bun run lint
+bun run test              # claims + extractor-eval (no Docker, no API calls)
+bun run lint
 ```
-
-## Known findings
-
-- **Link anchors are split:** `link_injector.py` splits multi-word links (`[PostgreSQL documentation](url)` becomes two links), so `link_exact` is 0.33 on digital PDFs.
-- **Two-column order:** the `fast` tier interleaves two-column layouts, so `reading_order` is about 0.82.
-- **Scans need the VLM:** `fast` scores 0 on every scanned/photo document because it has no OCR. Those documents need `smart` or `max`.
-- **VLM pacing** (`vlm_service.py`):
-  - `VLM_CONCURRENCY` (default 3) caps how many calls run at once.
-  - `VLM_DELAY_SECONDS` (default 0.5) pauses after each call.
-  - `VLM_RPM` (default 0 = off) caps requests per minute.
-  - 429 and 503 errors are retried with backoff that follows Gemini's `retryDelay` hint, plus jitter. A hint over 120 s (`MAX_RETRY_WAIT_SECONDS`) means the daily quota is exhausted, so the page fails immediately and counts toward `vlm_failures`.
-  - Errors that can't succeed on retry (bad key, unknown model) fail immediately.
-  - A page that finally fails still becomes empty Markdown. The benchmark counts every VLM call that returns no text as a `vlm_failure`, per document.
-- **Heading levels flattened on scans (flash-lite):** `smart` and `max` transcribe scanned/photo pages perfectly (text, word recall, reading order all 1.00) but turn every `###` into `##`, so `heading_f1` is 0.50. The rendered sizes (20 / 15 / 12.5 pt) are easy to tell apart, so the model or the OCR prompt is at fault; the prompt doesn't ask for distinct levels.
-- **Claim extractor (flash-lite, 3 runs):** claim F1 0.87 ± 0.02. Mutations, evidence and referential integrity are all 1.00. Small talk still yields a claim in 2 of 3 noise episodes. Update cases score 0.60 because the model merges two expected claims into one. Entity precision (0.42) is understated: the model extracts valid triples the fixtures don't list.
-- **Worker pacing:** the worker's own Gemini calls (outside the benchmark) still have no pacing.
-- **Fixed: the claim extractor sent Gemini an empty schema.** `zod-to-json-schema` doesn't support Zod v4, so `responseSchema` was `{"$schema": ...}` with no structure, and most responses failed Zod validation. `@whimsync/core` now exports `CognitiveExtractionResultJsonSchema` (built with `z.toJSONSchema`), and `llmService.ts` sends it as `responseJsonSchema`.
