@@ -1,0 +1,19 @@
+{
+  "links": [
+    {
+      "page": 1,
+      "anchor": "PostgreSQL documentation",
+      "url": "https://www.postgresql.org/docs/"
+    },
+    {
+      "page": 1,
+      "anchor": "pgvector extension",
+      "url": "https://github.com/pgvector/pgvector"
+    },
+    {
+      "page": 1,
+      "anchor": "BullMQ",
+      "url": "https://docs.bullmq.io"
+    }
+  ]
+}

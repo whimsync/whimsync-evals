@@ -1,0 +1,14 @@
+{
+  "links": [
+    {
+      "page": 1,
+      "anchor": "Whimsync",
+      "url": "https://whimsync.io"
+    },
+    {
+      "page": 1,
+      "anchor": "release notes",
+      "url": "https://example.com/releases"
+    }
+  ]
+}
