@@ -2,8 +2,27 @@
   "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!parser", "!claims/results"]
+    "includes": [
+      "**",
+      "!node_modules",
+      "!parser",
+      "!claims/results",
+      "!extractor/results",
+      "!extractor/cases",
+      "!extractor/.venv",
+      "!extractor/dataset.json"
+    ]
   },
-  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
-  "linter": { "enabled": true, "rules": { "preset": "none" } }
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "none"
+    }
+  }
 }
