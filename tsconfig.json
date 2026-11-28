@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["bun"],
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@whimsync/core": ["../whimsync/packages/core/src/index.ts"],
+      "@whimsync/worker/*": ["../whimsync/apps/worker/src/*"]
+    }
+  },
+  "include": ["claims/**/*.ts"]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "whimsync-evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bun install && uv sync --project extractor",
+    "eval": "uv run --project extractor extractor-eval",
+    "ui": "uv run --project extractor extractor-eval ui --open",
+    "claims": "bun --env-file=.env claims/run.ts",
+    "claims:compare": "uv run --project extractor extractor-eval compare",
+    "test": "bun run test:claims && bun run test:extractor",
+    "test:claims": "bun test claims/tests",
+    "test:extractor": "uv run --directory extractor pytest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check . && uv run --directory extractor ruff check . && uv run --directory extractor ruff format --check .",
+    "format": "biome check --write . && uv run --directory extractor ruff format ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.3",
+    "@types/bun": "latest",
+    "typescript": "^5.9.0"
+  }
+}

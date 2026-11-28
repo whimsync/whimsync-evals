@@ -1,0 +1,209 @@
+[
+  {
+    "id": "mutation_update_city",
+    "tags": ["mutation", "update"],
+    "rawText": "Big news: I moved from Pune to Berlin last month for a new job.",
+    "candidateClaims": [
+      {
+        "id": "11111111-1111-4111-8111-000000000001",
+        "content": "User lives in Pune, India.",
+        "kind": "fact"
+      }
+    ],
+    "expected": {
+      "claims": [
+        {
+          "content": "User moved from Pune to Berlin last month.",
+          "kind": "fact"
+        },
+        {
+          "content": "User started a new job in Berlin.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "moved_to",
+          "object": "Berlin"
+        }
+      ],
+      "mutations": [
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000001",
+          "action": "update"
+        }
+      ]
+    }
+  },
+  {
+    "id": "mutation_update_preference",
+    "tags": ["mutation", "update"],
+    "rawText": "I've actually gone off coffee completely; these days I only drink green tea in the mornings.",
+    "candidateClaims": [
+      {
+        "id": "11111111-1111-4111-8111-000000000002",
+        "content": "User drinks two cups of coffee every morning.",
+        "kind": "preference"
+      }
+    ],
+    "expected": {
+      "claims": [
+        {
+          "content": "User no longer drinks coffee.",
+          "kind": "preference"
+        },
+        {
+          "content": "User drinks green tea in the mornings.",
+          "kind": "preference"
+        }
+      ],
+      "mutations": [
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000002",
+          "action": "update"
+        }
+      ]
+    }
+  },
+  {
+    "id": "mutation_delete_pet",
+    "tags": ["mutation", "delete"],
+    "rawText": "Sorry, I was wrong before. I don't have a dog at all; that was my neighbour's dog.",
+    "candidateClaims": [
+      {
+        "id": "11111111-1111-4111-8111-000000000003",
+        "content": "User has a dog named Bruno.",
+        "kind": "fact"
+      }
+    ],
+    "expected": {
+      "claims": [
+        {
+          "content": "User does not have a dog.",
+          "kind": "fact"
+        }
+      ],
+      "mutations": [
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000003",
+          "action": "delete"
+        }
+      ]
+    }
+  },
+  {
+    "id": "mutation_noop_unrelated",
+    "tags": ["mutation", "noop"],
+    "rawText": "I just started learning to play the violin on weekends.",
+    "candidateClaims": [
+      {
+        "id": "11111111-1111-4111-8111-000000000004",
+        "content": "User works as a backend engineer at Zentrix Labs.",
+        "kind": "fact"
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000005",
+        "content": "User is vegetarian.",
+        "kind": "fact"
+      }
+    ],
+    "expected": {
+      "claims": [
+        {
+          "content": "User started learning to play the violin on weekends.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "learning",
+          "object": "violin"
+        }
+      ],
+      "mutations": [
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000004",
+          "action": "noop"
+        },
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000005",
+          "action": "noop"
+        }
+      ]
+    }
+  },
+  {
+    "id": "mutation_noop_reaffirm",
+    "tags": ["mutation", "noop"],
+    "rawText": "Still loving Berlin, the apartment in Kreuzberg is perfect.",
+    "candidateClaims": [
+      {
+        "id": "11111111-1111-4111-8111-000000000006",
+        "content": "User lives in Berlin.",
+        "kind": "fact"
+      }
+    ],
+    "expected": {
+      "claims": [
+        {
+          "content": "User lives in an apartment in Kreuzberg, Berlin.",
+          "kind": "fact"
+        }
+      ],
+      "mutations": [
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000006",
+          "action": "noop"
+        }
+      ]
+    }
+  },
+  {
+    "id": "mutation_mixed",
+    "tags": ["mutation", "update", "noop"],
+    "rawText": "Update on work: I left Zentrix Labs and joined Fernway as a staff engineer. I'm still vegetarian, obviously.",
+    "candidateClaims": [
+      {
+        "id": "11111111-1111-4111-8111-000000000007",
+        "content": "User works as a backend engineer at Zentrix Labs.",
+        "kind": "fact"
+      },
+      {
+        "id": "11111111-1111-4111-8111-000000000008",
+        "content": "User is vegetarian.",
+        "kind": "fact"
+      }
+    ],
+    "expected": {
+      "claims": [
+        {
+          "content": "User left Zentrix Labs.",
+          "kind": "fact"
+        },
+        {
+          "content": "User joined Fernway as a staff engineer.",
+          "kind": "fact"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "works_at",
+          "object": "Fernway"
+        }
+      ],
+      "mutations": [
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000007",
+          "action": "update"
+        },
+        {
+          "targetClaimId": "11111111-1111-4111-8111-000000000008",
+          "action": "noop"
+        }
+      ]
+    }
+  }
+]

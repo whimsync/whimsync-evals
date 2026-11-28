@@ -1,0 +1,14 @@
+# Secrets
+.env
+
+# Benchmark outputs (results JSON, HTML reports, generated corpus)
+parser/results/
+claims/results/
+extractor/results/
+
+# Tooling
+node_modules/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

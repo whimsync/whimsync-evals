@@ -1,0 +1,46 @@
+[
+  {
+    "id": "decision_database",
+    "tags": ["decision"],
+    "rawText": "After the benchmark results came in, we decided to go with PostgreSQL and pgvector instead of running a separate vector database.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "The team decided to use PostgreSQL with pgvector instead of a separate vector database.",
+          "kind": "decision"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "Team",
+          "predicate": "chose",
+          "object": "PostgreSQL"
+        }
+      ],
+      "mutations": []
+    }
+  },
+  {
+    "id": "goal_marathon",
+    "tags": ["goal"],
+    "rawText": "My goal for next year is to run a full marathon in under four hours.",
+    "candidateClaims": [],
+    "expected": {
+      "claims": [
+        {
+          "content": "User's goal for next year is to run a full marathon in under four hours.",
+          "kind": "goal"
+        }
+      ],
+      "entities": [
+        {
+          "subject": "User",
+          "predicate": "aims_to_run",
+          "object": "marathon"
+        }
+      ],
+      "mutations": []
+    }
+  }
+]
