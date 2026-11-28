@@ -1,0 +1,4 @@
+{
+  "_comment": "USD per million tokens, by model id. Fill in from https://ai.google.dev/pricing to get cost_usd in results; models not listed report cost as null (tokens are always recorded).",
+  "_example": { "input_per_million": 0.0, "output_per_million": 0.0 }
+}
