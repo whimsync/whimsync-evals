@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extractor Evals</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/runs">Extractor Evals <span>whimsync</span></a>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="#/runs" data-nav="runs">Runs</a>
+      <a href="#/dataset" data-nav="dataset">Dataset</a>
+      <a href="#/compare" data-nav="compare" id="nav-compare">Compare</a>
+      <a href="#/jobs" data-nav="jobs" id="nav-jobs">Jobs</a>
+      <a href="#/setup" data-nav="setup">Setup</a>
+    </nav>
+    <div class="spacer"></div>
+    <a class="job-pill" id="job-pill" href="#/jobs" hidden></a>
+    <a class="btn" href="#/dataset?add=1">Add PDFs</a>
+    <a class="btn primary" href="#/new-run" id="new-run-btn">New run</a>
+    <button class="ghost" id="theme-toggle" title="Toggle light/dark" aria-label="Toggle light or dark theme">◐</button>
+  </header>
+  <main id="app"><div class="empty">Loading…</div></main>
+  <script src="/static/app.js"></script>
+  <script src="/static/manage.js"></script>
+</body>
+</html>
