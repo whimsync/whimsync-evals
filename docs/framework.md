@@ -83,7 +83,7 @@ Draft gold copied from Max flatters Max. Every quality aggregate is therefore re
 
 | Suite | Contents | Gold |
 |---|---|---|
-| `core` | Real PDFs: scanned page with an OCR text layer and a signature footer, Chinese ruled table, Spanish I-9 form, Apple FY2024 10-K (ranges 32–36 statements, 49–50 segment note) | Draft until reviewed |
+| your own (`dataset add --suite <name>`, default `core`) | Real PDFs you add, scored per page or per quality range | Draft until reviewed |
 | `links` | Duplicate anchors, internal GoTo link (`#page-2`), per-word and line-wrapped multi-word anchors, adjacent different targets, text that already contains Markdown link syntax | Exact (built by construction) |
 | `synthetic` | 12 Markdown templates rendered digital plus seeded OpenCV `scanned_noisy` and `photo` variants | Exact (the template) |
 
@@ -216,7 +216,7 @@ The UI's unit view puts the source page images, the gold, and every candidate co
 
 ## 5. Known limitations
 
-- **Core gold is draft.** It was seeded from Max output. Review the four core cases before trusting their quality numbers, and use *Verified gold only* until then.
+- **Added PDFs start with draft gold.** `dataset add` seeds it from Max output, which flatters Max. Review each case before trusting its quality numbers, and use *Verified gold only* until then.
 - **Per-page timing for native pages isn't available.** Digital extraction is one pass over the whole document (`native_extraction_ms` in the trace). Only VLM pages get a per-page `duration_ms`.
 - **The trace depends on the strategies' current call pattern.** If a strategy stops calling `inject_links_inline` as its last per-page step, `pages/NNN.md` will be wrong. `tests/test_eval_cli.py` in whimsync would catch that.
 - **The judge varies.** Even at temperature 0 it isn't perfectly deterministic. Treat a judge delta under about 0.3 as noise unless it repeats.

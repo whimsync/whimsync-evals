@@ -7,6 +7,7 @@ Evaluation harnesses for [whimsync](https://github.com/whimsync/whimsync), plus 
 | **Document parser** (`extractor/`) | PDF → Markdown quality, routing, links and cost of the `balanced` / `max` tiers, run in Docker | `extractor-eval` (Python, `uv`) | `extractor/dataset.json` + `extractor/cases/` |
 | **Claim extractor** (`claims/`) | Claims, entities, mutations and evidence from the single Gemini extraction call | `claims/run.ts` (TypeScript, Bun) | `claims/fixtures/episodes/*.json` |
 
+- [docs/running.md](docs/running.md): step-by-step guide to setup, building a dataset, running, reading and comparing results
 - [docs/framework.md](docs/framework.md): what the parser evaluation measures, how runs and scoring work, how to read and manage results
 - [docs/extending.md](docs/extending.md): adding cases, labels, metrics and suites
 
@@ -20,7 +21,7 @@ cp .env.example .env           # fill in GEMINI_API_KEY
 bun run eval -- image build    # build whimsync-extractor-eval:<commit> from ../whimsync
 ```
 
-The parser runs **inside a Docker image** built from a whimsync checkout (`apps/extractor/Dockerfile.eval`). The evaluator never imports whimsync code. The image tag is the extractor commit, or `<commit>-dirty-<hash>` when `apps/extractor` has uncommitted changes, so every result names the exact code it measured. Use `--extractor-root` to build from another checkout.
+The parser runs **inside a Docker image** built from a whimsync checkout (`apps/extractor/Dockerfile.eval`, added in [whimsync#40](https://github.com/whimsync/whimsync/pull/40); until it merges, check that branch out in `../whimsync`, see [docs/running.md](docs/running.md#1-prerequisites)). The evaluator never imports whimsync code. The image tag is the extractor commit, or `<commit>-dirty-<hash>` when `apps/extractor` has uncommitted changes, so every result names the exact code it measured. Use `--extractor-root` to build from another checkout.
 
 | Variable | Used by | Notes |
 |---|---|---|
@@ -35,9 +36,9 @@ The parser runs **inside a Docker image** built from a whimsync checkout (`apps/
 ## Document parser: `extractor-eval`
 
 ```bash
-bun run eval -- run --suite core,links --tiers balanced,max --label baseline --group baseline
-bun run eval -- run --case scanned-footer --tiers balanced,max
-bun run eval -- run --suite core --perf-repeats 3 --no-judge        # timing only (3 extra runs per small case)
+bun run eval -- run --suite synthetic,links --tiers balanced,max --label baseline --group baseline
+bun run eval -- run --case my-doc --tiers balanced,max
+bun run eval -- run --suite mine --perf-repeats 3 --no-judge        # timing only (3 extra runs per small case)
 bun run eval -- run --resume <run-id>                               # continue an interrupted run
 bun run eval -- rescore <run>                                       # re-score saved outputs (no API calls)
 bun run eval -- compare <runA> <runB> [--tier max] [--scope verified]
@@ -71,11 +72,13 @@ cases/<id>/expected/ranges/<id>.md      # one file per quality range (large PDFs
 cases/<id>/expected/links.json          # optional link expectations
 ```
 
-| Suite | Cases | Gold |
+The dataset starts empty. Fill it with generated cases, your own PDFs, or both:
+
+| Suite | How to create it | Expected output |
 |---|---|---|
-| `core` | `scanned-footer`, `chinese-grid-table`, `complex-form` (I-9), `apple-filing` (121 pages; ranges 32–36 and 49–50) | **Draft**, seeded from the Max tier. Review it, then mark it verified. |
-| `links` | duplicate anchors, internal GoTo link, multi-word/wrapped anchors, pre-formatted Markdown links | Exact, built by construction |
-| `synthetic` | 12 templates × (digital, scanned_noisy, photo) | Exact (the template) |
+| `synthetic` | `dataset synth`: 12 templates × (digital, scanned_noisy, photo) | Exact (the template) |
+| `links` | `dataset synth`: duplicate anchors, internal GoTo links, multi-word or wrapped anchors, pre-formatted Markdown links | Exact, built by construction |
+| any name you choose (`--suite`) | `dataset add` or **Add PDFs** in the UI | **Draft**, seeded from the Max tier. Review it, then mark it verified. |
 
 ```bash
 bun run eval -- dataset add ~/doc.pdf --id my-case [--range income:10-16]   # copy, hash, suggest labels, draft gold
