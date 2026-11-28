@@ -151,7 +151,7 @@ class JobManager:
         if pid and _alive(pid):
             # SIGINT first: the runner marks the run 'interrupted' and keeps what it finished.
             try:
-                os.killpg(pid, signal.SIGINT)  # whole group, so `docker run` forwards it
+                _interrupt(pid)  # whole group, so `docker run` forwards it
             except (ProcessLookupError, PermissionError):
                 pass
             threading.Thread(target=_escalate, args=(pid,), daemon=True).start()
@@ -203,7 +203,7 @@ class JobManager:
                         stdin=subprocess.DEVNULL,
                         stdout=log,
                         stderr=subprocess.STDOUT,
-                        start_new_session=True,
+                        **_NEW_GROUP,
                     )
                 except OSError as e:
                     job.update(status="failed", error=str(e), finished_at=_now())
@@ -234,7 +234,43 @@ class JobManager:
             self._save(job)
 
 
+_WINDOWS = sys.platform == "win32"
+
+# Each job runs in its own process group, so cancelling reaches `docker run` too.
+_NEW_GROUP: dict = (
+    {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    if _WINDOWS
+    else {"start_new_session": True}
+)
+
+
+def _interrupt(pid: int) -> None:
+    """Ask the job to stop cleanly (Ctrl+C / Ctrl+Break), so the run is marked interrupted."""
+    if _WINDOWS:
+        os.kill(pid, signal.CTRL_BREAK_EVENT)
+    else:
+        os.killpg(pid, signal.SIGINT)
+
+
+def _terminate(pid: int) -> None:
+    if _WINDOWS:
+        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
+    else:
+        os.killpg(pid, signal.SIGTERM)
+
+
 def _alive(pid: int) -> bool:
+    if _WINDOWS:  # os.kill(pid, 0) would terminate the process on Windows
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not handle:
+            return False
+        code = ctypes.c_ulong()
+        ok = kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
+        kernel32.CloseHandle(handle)
+        return bool(ok) and code.value == 259  # STILL_ACTIVE
     try:
         os.kill(pid, 0)
     except (ProcessLookupError, PermissionError):
@@ -249,7 +285,7 @@ def _escalate(pid: int, grace: float = 20.0) -> None:
             return
         time.sleep(0.5)
     try:
-        os.killpg(pid, signal.SIGTERM)
+        _terminate(pid)
     except (ProcessLookupError, PermissionError):
         pass
 

@@ -41,7 +41,7 @@ def pricing() -> dict[str, dict[str, float]]:
     path = PROJECT_DIR / "pricing.json"
     if not path.exists():
         return {}
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     return {k: v for k, v in data.items() if not k.startswith("_")}
 
 

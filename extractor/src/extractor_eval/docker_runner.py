@@ -44,7 +44,12 @@ class Image:
 
 def _git(root: Path, *args: str) -> str:
     return subprocess.run(
-        ["git", "-C", str(root), *args], check=True, capture_output=True, text=True
+        ["git", "-C", str(root), *args],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     ).stdout.strip()
 
 
@@ -69,7 +74,12 @@ def extractor_version(root: Path) -> tuple[str, bool, str]:
 def build_image(extractor_root: Path, tag: str | None = None, quiet: bool = False) -> Image:
     root = extractor_root.resolve()
     if not (root / EXTRACTOR_SUBDIR / "Dockerfile.eval").exists():
-        raise DockerError(f"{root / EXTRACTOR_SUBDIR / 'Dockerfile.eval'} not found")
+        raise DockerError(
+            f"{root / EXTRACTOR_SUBDIR / 'Dockerfile.eval'} not found. "
+            "This whimsync checkout has no evaluation support: check out a whimsync branch "
+            "that contains apps/extractor/Dockerfile.eval, src/eval_cli.py and "
+            "src/parsing/evaluation_trace.py, or pass --extractor-root <checkout>."
+        )
     commit, dirty, auto_tag = extractor_version(root)
     tag = tag or auto_tag
     ref = f"{IMAGE_REPO}:{tag}"
@@ -86,7 +96,7 @@ def build_image(extractor_root: Path, tag: str | None = None, quiet: bool = Fals
     ]
     if quiet:
         cmd.insert(2, "-q")
-    proc = subprocess.run(cmd, capture_output=quiet, text=True)
+    proc = subprocess.run(cmd, capture_output=quiet, text=True, encoding="utf-8", errors="replace")
     if proc.returncode != 0:
         raise DockerError(f"docker build failed:\n{proc.stderr if quiet else ''}")
     image = Image(
@@ -170,17 +180,21 @@ def run_container(
         name,
         "--network",
         "bridge",
-        "--user",
-        f"{os.getuid()}:{os.getgid()}",
-        "-v",
-        f"{pdf.parent.resolve()}:/input:ro",
-        "-v",
-        f"{output.resolve()}:/output",
+        # --mount, not -v: Windows paths contain a drive-letter colon.
+        "--mount",
+        f"type=bind,source={pdf.parent.resolve()},target=/input,readonly",
+        "--mount",
+        f"type=bind,source={output.resolve()},target=/output",
         "-e",
         f"IMAGE_TAG={image.tag}",
         "-e",
         f"IMAGE_DIGEST={image.digest}",
     ]
+    if hasattr(os, "getuid"):  # Linux/macOS: write outputs as the current user, not root
+        cmd[cmd.index("--network") : cmd.index("--network")] = [
+            "--user",
+            f"{os.getuid()}:{os.getgid()}",
+        ]
     for name in CONTAINER_ENV:
         if name in env:
             cmd += ["-e", name]  # value is inherited from `env`, never put on argv
